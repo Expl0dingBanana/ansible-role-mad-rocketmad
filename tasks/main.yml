@@ -1,0 +1,78 @@
+---
+# tasks file for ansible-role-mad-rocketmad
+- name: Install Py3 VEnv
+  apt:
+    name: python-virtualenv
+    state: present
+    update_cache: yes
+- name: "Check for venv folder"
+  stat: path=/home/mapadroid/venv/rocketmad
+  register: exists_venv
+- name: Install Virtual Envrionment
+  become: yes
+  become_user: mapadroid
+  shell: virtualenv -p python3 /home/mapadroid/venv/rocketmad
+  when: not exists_venv.stat.exists
+- name: Download NodeJS 
+  shell: |
+   curl -sL https://deb.nodesource.com/setup_14.x | bash -
+- name: Install Node
+  apt:
+    pkg: 
+      - nodejs
+      - imagemagick
+      - libffi-dev
+      - python3-dev
+      - build-essential
+- name: Check for existing installation
+  stat: path=/opt/rocketmad/runserver.py
+  register: exists_installation
+- name: Clone Repo
+  git:
+    repo: https://github.com/cecpk/RocketMAD.git
+    dest: /opt/rocketmad
+  when: not exists_installation.stat.exists
+- name: Set Permissions
+  file:
+    path: /opt/rocketmad
+    state: directory
+    owner: mapadroid
+    group: pogomapping
+    recurse: yes
+- name: Install Python Requirements
+  become: yes
+  become_user: mapadroid
+  pip:
+    requirements: /opt/rocketmad/requirements.txt
+    executable: /home/mapadroid/venv/rocketmad/bin/pip3
+- name: Setup basic configuration file
+  template:
+    src: config.ini
+    dest: /opt/rocketmad/config/config.ini
+    owner: mapadroid
+    group: pogomapping
+    mode: 0644
+- name: Install npm package
+  become: yes
+  become_user: mapadroid
+  npm:
+    path: /opt/rocketmad
+- name: Building package
+  become: yes
+  become_user: mapadroid
+  command: 
+    chdir: /opt/rocketmad
+    cmd: npm run build
+- name: Create service file
+  copy:
+    src: rocketmad.service
+    dest: /etc/systemd/system
+    owner: root
+    group: root
+  notify:
+    - Start RocketMAD
+- name: Allow RockeMAD through UFW
+  ufw:
+    rule: allow
+    port: "{{ rocketmad_port }}"
+    proto: tcp

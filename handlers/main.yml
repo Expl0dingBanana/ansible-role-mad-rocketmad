@@ -1,0 +1,6 @@
+---
+- name: Start RocketMAD
+  systemd:
+    name: rocketmad
+    state: started
+    enabled: yes

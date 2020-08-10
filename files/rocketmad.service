@@ -1,0 +1,15 @@
+[Unit]
+Description=RocketMAD
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=mapadroid
+Group=pogomapping
+Type=simple
+WorkingDirectory=/opt/rocketmad
+ExecStart=/home/mapadroid/venv/rocketmad/bin/python3 /opt/rocketmad/runserver.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
